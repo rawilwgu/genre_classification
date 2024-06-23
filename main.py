@@ -49,7 +49,6 @@ def go(config: DictConfig):
                 "artifact_description": "Data with preprocessing applied"
             },
         )
-        pass
 
     if "check_data" in steps_to_execute:
 
@@ -62,21 +61,20 @@ def go(config: DictConfig):
                "ks_alpha": config["data"]["ks_alpha"]
            },
        )
-        pass
 
     if "segregate" in steps_to_execute:
 
         _ = mlflow.run(
-            os.path.join(root_path, "segregage"),
+            os.path.join(root_path, "segregate"),
             "main",
             parameters={
-                "input_artifact": "",
-                "artifact_root": "",
-                "artifact_type": "",
-
-            }
+                "input_artifact": "preprocessed_data.csv:latest",
+                "artifact_root": "data",
+                "artifact_type": "segregated_data",
+                "test_size": config["data"]["test_size"],
+                "stratify": config["data"]["stratify"]
+            },
         )
-        pass
 
     if "random_forest" in steps_to_execute:
 
@@ -86,13 +84,30 @@ def go(config: DictConfig):
         with open(model_config, "w+") as fp:
             fp.write(OmegaConf.to_yaml(config["random_forest_pipeline"]))
 
-        ## YOUR CODE HERE: call the random_forest step
-        pass
+        _ = mlflow.run(
+            os.path.join(root_path, "random_forest"),
+            "main",
+            parameters={
+                "train_data": "data_train.csv:latest",
+                "model_config": model_config,
+                "export_artifact": config["random_forest_pipeline"]["export_artifact"],
+                "random_seed": config["main"]["random_seed"],
+                "val_size": config["data"]["test_size"],
+                "stratify": config["data"]["stratify"]
+            },
+        )
+
 
     if "evaluate" in steps_to_execute:
 
-        ## YOUR CODE HERE: call the evaluate step
-        pass
+        _ = mlflow.run(
+            os.path.join(root_path, "evaluate"),
+            "main",
+            parameters={
+                "model_export": f"{config['random_forest_pipeline']['export_artifact']}:latest",
+                "test_data": "data_test.csv:latest"
+            },
+        )
 
 
 if __name__ == "__main__":
